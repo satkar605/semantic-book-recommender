@@ -1,7 +1,12 @@
 # Environment
 venv/
 env/
+.venv
+ENV/
+env.bak/
+venv.bak/
 .env
+.envrc
 
 # Data files (exclude large raw datasets, but keep processed files for deployment)
 # data/*.csv
@@ -23,6 +28,12 @@ __pycache__/
 *.so
 .Python
 
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
 # IDE
 .vscode/
 .idea/
@@ -33,3 +44,15 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Type checking
+.mypy_cache/
+.pytype/
+
+# Cursor
+.cursorignore
+.cursorindexingignore
