@@ -14,8 +14,8 @@ venv.bak/
 # data/*.json
 !data/.gitkeep
 
-# Vector database (keep for deployment, but can exclude if too large)
-# chroma_index/
+# Vector database artifacts (rebuild locally)
+data/chroma_index/
 
 # Jupyter
 .ipynb_checkpoints/

@@ -187,7 +187,13 @@ llm-semantic-book-recommender/
 3. **Run notebooks sequentially**
    Execute notebooks 01-04 in order to generate all required data files.
 
-4. **Launch dashboard**
+4. **Rebuild the Chroma index locally**
+   ```bash
+   source venv/bin/activate  # if not already active
+   python scripts/rebuild_chroma.py
+   ```
+
+5. **Launch dashboard**
    ```bash
    streamlit run streamlit_dashboard.py
    ```
