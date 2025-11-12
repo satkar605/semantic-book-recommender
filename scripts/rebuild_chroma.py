@@ -14,7 +14,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-from langchain.schema import Document
+try:
+    from langchain.schema import Document
+except ModuleNotFoundError:  # langchain >= 0.2.0
+    from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 
