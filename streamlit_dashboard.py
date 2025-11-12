@@ -21,21 +21,30 @@ def load_books():
     )
     return books
 
-@st.cache_resource
-def load_vector_db():
+def load_vector_db(index_version: float):
     embeddings = OpenAIEmbeddings()
     db_books = Chroma(
         persist_directory="data/chroma_index",
-        embedding_function=embeddings
+        embedding_function=embeddings,
+        collection_name="books"
     )
     return db_books
 
 # Load dataset and vector database
 books = load_books()
-db_books = load_vector_db()
+index_path = Path("data/chroma_index/chroma.sqlite3")
+if not index_path.exists():
+    st.warning("Vector index not found. Please run `python scripts/rebuild_chroma.py` first.")
+    db_books = None
+else:
+    index_version = index_path.stat().st_mtime
+    db_books = load_vector_db(index_version)
 
 def retrieve_semantic_recommendations(query: str, category: str = None, tone: str = None, initial_top_k: int = 50, final_top_k: int = 16):
     try:
+        if db_books is None:
+            st.error("Vector index not loaded. Rebuild it with `python scripts/rebuild_chroma.py`.")
+            return pd.DataFrame()
         # Get semantic recommendations from vector database
         recs = db_books.similarity_search(query, k=initial_top_k)
         

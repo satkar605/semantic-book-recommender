@@ -82,11 +82,13 @@ def main() -> None:
         documents=documents,
         embedding=embeddings,
         persist_directory=str(persist_dir),
+        collection_name="books",
     )
 
     vectorstore = Chroma(
         persist_directory=str(persist_dir),
         embedding_function=embeddings,
+        collection_name="books",
     )
     doc_count = vectorstore._collection.count() if hasattr(vectorstore, "_collection") else len(documents)
 
