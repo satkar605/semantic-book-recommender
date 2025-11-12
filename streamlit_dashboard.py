@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain_chroma import Chroma
 import streamlit as st
+from scripts.rebuild_chroma import main as rebuild_vector_index
 
 load_dotenv()
 
@@ -21,6 +22,7 @@ def load_books():
     )
     return books
 
+@st.cache_resource
 def load_vector_db(index_version: float):
     embeddings = OpenAIEmbeddings()
     db_books = Chroma(
@@ -30,20 +32,44 @@ def load_vector_db(index_version: float):
     )
     return db_books
 
-# Load dataset and vector database
+# Load dataset
 books = load_books()
-index_path = Path("data/chroma_index/chroma.sqlite3")
-if not index_path.exists():
-    st.warning("Vector index not found. Please run `python scripts/rebuild_chroma.py` first.")
-    db_books = None
-else:
-    index_version = index_path.stat().st_mtime
+db_books = None
+
+def ensure_vector_index() -> float | None:
+    index_path = Path("data/chroma_index/chroma.sqlite3")
+    if index_path.exists():
+        return index_path.stat().st_mtime
+
+    with st.spinner("Vector index missing. Building it now..."):
+        try:
+            rebuild_vector_index()
+        except Exception as exc:
+            st.error(
+                "Unable to build the vector index automatically. "
+                "Check that your `OPENAI_API_KEY` is set and try again."
+            )
+            st.error(str(exc))
+            return None
+
+    if not index_path.exists():
+        st.error("Vector index still missing after rebuild attempt.")
+        return None
+
+    return index_path.stat().st_mtime
+
+def initialize_vector_db():
+    global db_books
+    index_version = ensure_vector_index()
+    if index_version is None:
+        db_books = None
+        return
     db_books = load_vector_db(index_version)
 
 def retrieve_semantic_recommendations(query: str, category: str = None, tone: str = None, initial_top_k: int = 50, final_top_k: int = 16):
     try:
         if db_books is None:
-            st.error("Vector index not loaded. Rebuild it with `python scripts/rebuild_chroma.py`.")
+            st.error("Vector index not available. Check the setup logs above and try again.")
             return pd.DataFrame()
         # Get semantic recommendations from vector database
         recs = db_books.similarity_search(query, k=initial_top_k)
@@ -106,6 +132,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+initialize_vector_db()
 
 # Sidebar with instructions
 with st.sidebar:
