@@ -12,6 +12,7 @@ load_dotenv()
 @st.cache_data
 def load_books():
     books = pd.read_csv("data/books_with_emotions.csv")
+    books["isbn13"] = books["isbn13"].apply(lambda x: str(int(x)) if pd.notna(x) else None)
     books["large_thumbnail"] = books["thumbnail"] + "&fife=w800"
     books["large_thumbnail"] = np.where(
         books["large_thumbnail"].isna(),
@@ -38,25 +39,26 @@ def retrieve_semantic_recommendations(query: str, category: str = None, tone: st
         # Get semantic recommendations from vector database
         recs = db_books.similarity_search(query, k=initial_top_k)
         
-        # Extract ISBNs from search results (more robust parsing)
+        # Extract deduplicated ISBNs from vector metadata
         books_list = []
+        seen_isbns = set()
         for rec in recs:
-            try:
-                # Try to extract ISBN from the first part of the page content
-                isbn_str = rec.page_content.strip().strip('"').strip("'").split()[0]
-                # Remove any quotes and convert to int
-                isbn_str = isbn_str.strip('"').strip("'")
-                if isbn_str.isdigit():
-                    books_list.append(int(isbn_str))
-            except (ValueError, IndexError, AttributeError) as e:
-                # Skip this record if we can't parse the ISBN
+            isbn_str = rec.metadata.get("isbn13")
+            if not isbn_str:
                 continue
+            isbn_str = str(isbn_str).strip()
+            if not isbn_str or isbn_str in seen_isbns:
+                continue
+            seen_isbns.add(isbn_str)
+            books_list.append(isbn_str)
         
         if not books_list:
             return pd.DataFrame()  # Return empty DataFrame if no ISBNs found
         
         # Filter books by ISBN
-        book_recs = books[books["isbn13"].isin(books_list)].copy()
+        indexed_books = books.set_index("isbn13")
+        book_recs = indexed_books.reindex(books_list).dropna(how="all").reset_index()
+        book_recs.rename(columns={"index": "isbn13"}, inplace=True)
         
         if len(book_recs) == 0:
             return pd.DataFrame()  # Return empty if no matches
